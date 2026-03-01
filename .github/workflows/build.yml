@@ -1,23 +1,16 @@
-name: OS-Build
-on: [push]
+all: os-image.bin
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+boot.bin: Source/boot.asm
+	nasm -f bin Source/boot.asm -o boot.bin
 
-      - name: Install Build Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y nasm gcc-multilib binutils make
+kernel.o: Source/kernel.c
+	gcc -m32 -ffreestanding -c Source/kernel.c -o kernel.o
 
-      - name: Compile OS Image
-        run: make
+kernel.bin: kernel.o
+	ld -m elf_i386 -o kernel.bin -Ttext 0x1000 kernel.o --oformat binary
 
-      - name: Upload OS Binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: Project-637-OS-v0.1
-          path: os-image.bin
+os-image.bin: boot.bin kernel.bin
+	cat boot.bin kernel.bin > os-image.bin
+
+clean:
+	rm -f *.bin *.o
